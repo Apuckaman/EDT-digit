@@ -1,4 +1,3 @@
-// src/models/Company.js
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../db');
 
@@ -18,10 +17,28 @@ const Company = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
+      field: 'tax_number',
     },
-    vatStatus: {
-      type: DataTypes.STRING, // pl. 'afas' vagy 'afamentes'
+    type: {
+      type: DataTypes.ENUM('AFAS', 'AFAMENTES'),
       allowNull: false,
+      field: 'type',
+    },
+    bankAccount: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'bank_account',
+    },
+    szamlazzApiKey: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'szamlazz_api_key',
+    },
+    active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      field: 'active',
     },
   },
   {

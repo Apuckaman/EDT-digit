@@ -12,12 +12,12 @@ async function seedCompanies() {
       {
         name: 'Ween Bt.',
         taxNumber: '25145940-1-02',
-        vatStatus: 'afamentes',
+        type: 'AFAMENTES',
       },
       {
         name: 'SwiftGate Bt.',
         taxNumber: '25742561-2-42',
-        vatStatus: 'afas',
+        type: 'AFAS',
       },
     ];
 
