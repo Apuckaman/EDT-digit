@@ -1,12 +1,16 @@
 const express = require('express');
 
+const { authRouter } = require('./auth/authRoutes');
 const { companiesRouter } = require('./companies/companiesRoutes');
 const { clientsRouter } = require('./clients/clientsRoutes');
+const { numbersRouter } = require('./numbers/numbersRoutes');
 const { asyncHandler } = require('../../middleware/asyncHandler');
 const { testConnection } = require('../../db');
 const { ApiError } = require('../../errors/ApiError');
 
 const router = express.Router();
+
+router.use('/auth', authRouter);
 
 router.get('/status', (req, res) => {
   res.json({
@@ -34,5 +38,6 @@ router.get(
 
 router.use('/companies', companiesRouter);
 router.use('/clients', clientsRouter);
+router.use('/numbers', numbersRouter);
 
 module.exports = { apiV1Router: router };

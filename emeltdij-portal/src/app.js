@@ -1,4 +1,5 @@
 const express = require('express');
+const session = require('express-session');
 
 const { apiV1Router } = require('./api/v1');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -7,6 +8,19 @@ const { notFound } = require('./middleware/notFound');
 const app = express();
 
 app.use(express.json());
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'change-me',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+    },
+  })
+);
 
 // Modellek és relációk betöltése (side-effect)
 require('./models');
