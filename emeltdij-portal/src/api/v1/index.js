@@ -1,6 +1,7 @@
 const express = require('express');
 
 const { companiesRouter } = require('./companies/companiesRoutes');
+const { clientsRouter } = require('./clients/clientsRoutes');
 const { asyncHandler } = require('../../middleware/asyncHandler');
 const { testConnection } = require('../../db');
 const { ApiError } = require('../../errors/ApiError');
@@ -32,5 +33,6 @@ router.get(
 );
 
 router.use('/companies', companiesRouter);
+router.use('/clients', clientsRouter);
 
 module.exports = { apiV1Router: router };

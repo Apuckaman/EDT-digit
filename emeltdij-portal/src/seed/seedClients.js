@@ -11,22 +11,26 @@ async function seedClients() {
 
     const clientsData = [
       {
+        code: 'UGYF001',
         name: 'Teszt Ügyfél 1',
         email: 'ugyfel1@example.com',
         billingAddress: '1111 Budapest, Teszt utca 1.',
+        phone: '+36-30-111-1111',
         companyId: ween.id,
       },
       {
+        code: 'UGYF002',
         name: 'Teszt Ügyfél 2',
         email: 'ugyfel2@example.com',
         billingAddress: '2222 Budapest, Másik utca 2.',
+        phone: '+36-30-222-2222',
         companyId: swift.id,
       },
     ];
 
     for (const data of clientsData) {
       const [client, created] = await Client.findOrCreate({
-        where: { name: data.name, companyId: data.companyId },
+        where: { code: data.code },
         defaults: data,
       });
 
