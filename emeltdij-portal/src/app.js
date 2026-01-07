@@ -1,27 +1,27 @@
-// src/app.js
 const express = require('express');
+
+const { apiV1Router } = require('./api/v1');
+const { errorHandler } = require('./middleware/errorHandler');
+const { notFound } = require('./middleware/notFound');
+
 const app = express();
 
-// JSON body-khoz (később jól fog jönni)
 app.use(express.json());
 
 // Modellek és relációk betöltése (side-effect)
 require('./models');
 
-// Status route-ok betöltése
-const statusRoutes = require('./routes/statusRoutes');
-app.use('/', statusRoutes);
+// Root: egyszerű szöveges válasz
+app.get('/', (req, res) => {
+  res.type('text/plain; charset=utf-8');
+  res.send('EDT digit – Emeltdíjas Portál backend működik 🚀');
+});
 
-// Company route-ok
-const companyRoutes = require('./routes/companyRoutes');
-app.use('/', companyRoutes);
+// API v1
+app.use('/api/v1', apiV1Router);
 
-// Client route-ok
-const clientRoutes = require('./routes/clientRoutes');
-app.use('/', clientRoutes);
-
-// Premium number route-ok
-const numberRoutes = require('./routes/numberRoutes');
-app.use('/', numberRoutes);
+// 404 + error contract
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
