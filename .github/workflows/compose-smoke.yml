@@ -1,0 +1,78 @@
+name: compose-smoke
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+  pull_request:
+
+jobs:
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compose version
+        run: docker compose version
+
+      - name: Prepare env
+        working-directory: emeltdij-portal
+        run: |
+          cp .env.example .env
+          {
+            echo "DB_HOST=mysql"
+            echo "DB_PORT=3306"
+            echo "DB_NAME=emeltdij_portal"
+            echo "DB_USER=emeltdij"
+            echo "DB_PASSWORD=emeltdij_password"
+            echo "DB_ROOT_PASSWORD=root_password"
+            echo "SESSION_SECRET=ci-secret"
+            echo "DB_LOGGING=false"
+          } >> .env
+
+      - name: Start stack
+        working-directory: emeltdij-portal
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+
+      - name: Wait for MySQL
+        working-directory: emeltdij-portal
+        run: |
+          for i in $(seq 1 60); do
+            if docker compose --env-file .env -f docker-compose.yml -f docker-compose.ci.yml exec -T mysql mysqladmin ping -h 127.0.0.1 -uroot -proot_password --silent; then
+              echo "MySQL is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MySQL did not become ready in time"
+          exit 1
+
+      - name: Wait for backend /ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:3000/api/v1/ready" >/dev/null; then
+              echo "Backend is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend did not become ready in time"
+          exit 1
+
+      - name: Smoke check /api/v1/status
+        run: curl -fsS "http://localhost:3000/api/v1/status"
+
+      - name: Logs on failure
+        if: failure()
+        working-directory: emeltdij-portal
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.ci.yml logs --no-color
+
+      - name: Teardown
+        if: always()
+        working-directory: emeltdij-portal
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.ci.yml down -v
+

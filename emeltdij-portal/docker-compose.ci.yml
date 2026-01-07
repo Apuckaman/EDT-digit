@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: 3000
+      NODE_ENV: test
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-emeltdij_portal}
+      DB_USER: ${DB_USER:-emeltdij}
+      DB_PASSWORD: ${DB_PASSWORD:-emeltdij_password}
+      SESSION_SECRET: ${SESSION_SECRET:-ci-secret}
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
