@@ -1,6 +1,7 @@
 name: compose-smoke
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
