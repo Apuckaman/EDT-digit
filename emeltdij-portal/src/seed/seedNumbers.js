@@ -14,30 +14,36 @@ async function seedNumbers() {
 
     const numbersData = [
       {
-        phoneNumber: '0690-111-1111',
+        number: '0690-111-1111',
         clientId: client1.id,
         companyId: ween.id,
+        provider: 'Telekom',
+        pricingPlan: 'Alap díjcsomag',
       },
       {
-        phoneNumber: '0690-222-2222',
+        number: '0690-222-2222',
         clientId: client1.id,
         companyId: ween.id,
+        provider: 'Telekom',
+        pricingPlan: 'Prémium díjcsomag',
       },
       {
-        phoneNumber: '0690-333-3333',
+        number: '0690-333-3333',
         clientId: client2.id,
         companyId: swift.id,
+        provider: 'Vodafone',
+        pricingPlan: 'Alap díjcsomag',
       },
     ];
 
     for (const data of numbersData) {
       const [number, created] = await PremiumNumber.findOrCreate({
-        where: { phoneNumber: data.phoneNumber },
+        where: { companyId: data.companyId, number: data.number },
         defaults: data,
       });
 
       console.log(
-        `${created ? 'Létrehozva' : 'Már létezett'}: ${number.phoneNumber} (clientId: ${number.clientId}, companyId: ${number.companyId})`
+        `${created ? 'Létrehozva' : 'Már létezett'}: ${number.number} (clientId: ${number.clientId}, companyId: ${number.companyId})`
       );
     }
 

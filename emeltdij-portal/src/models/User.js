@@ -1,43 +1,34 @@
-// src/models/Client.js
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../db');
 
-const Client = sequelize.define(
-  'Client',
+const User = sequelize.define(
+  'User',
   {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
-    code: {
+    username: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
-      field: 'code',
+      field: 'username',
     },
-    name: {
+    passwordHash: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'password_hash',
     },
-    billingAddress: {
-      type: DataTypes.TEXT,
+    role: {
+      type: DataTypes.ENUM('ADMIN', 'UGYFEL'),
       allowNull: false,
-      field: 'billing_address',
+      field: 'role',
     },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    phone: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      field: 'phone',
-    },
-    companyId: {
+    clientId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      field: 'company_id',
+      allowNull: true,
+      field: 'client_id',
     },
     active: {
       type: DataTypes.BOOLEAN,
@@ -47,9 +38,11 @@ const Client = sequelize.define(
     },
   },
   {
-    tableName: 'clients',
-    timestamps: true,
+    tableName: 'users',
+    timestamps: false,
+    indexes: [{ fields: ['role'] }, { fields: ['active'] }, { fields: ['client_id'] }],
   }
 );
 
-module.exports = Client;
+module.exports = User;
+

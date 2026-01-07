@@ -1,2 +1,4 @@
 Emeltdíjas portál projekt.
-<!-- smoke trigger -->
+
+A backend projekt az `emeltdij-portal/` mappában van. Indításhoz lásd: `emeltdij-portal/README.md`.
+
