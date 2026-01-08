@@ -38,7 +38,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   });
 
   if (!res.ok) {
-    if (res.status === 401) {
+    // Ticket S6-01: invalid login -> csak backend message (ne redirect loop),
+    // de minden más 401 esetén redirect loginra.
+    if (res.status === 401 && !path.startsWith('/api/v1/auth/login')) {
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
     const body = (await parseJsonSafe(res)) as ApiErrorPayload | null;

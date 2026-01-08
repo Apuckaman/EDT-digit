@@ -16,6 +16,7 @@ export function CompaniesPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [search, setSearch] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +26,7 @@ export function CompaniesPage() {
     try {
       const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (search.trim()) qs.set('search', search.trim());
+      if (showInactive) qs.set('status', 'inactive');
       const resp = await apiFetch<ListResp<Company>>(`/api/v1/companies?${qs.toString()}`);
       setData(resp.data);
     } catch (e) {
@@ -47,6 +49,14 @@ export function CompaniesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <input
+            type="checkbox"
+            checked={showInactive}
+            onChange={(e) => setShowInactive(e.target.checked)}
+          />
+          Show inactive
+        </label>
         <button onClick={() => void load()} disabled={loading}>
           Search
         </button>
@@ -101,12 +111,12 @@ export function CompaniesPage() {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm('Soft delete company?')) return;
+                    if (!confirm('Deactivate company?')) return;
                     await apiFetch(`/api/v1/companies/${c.id}`, { method: 'DELETE' });
                     await load();
                   }}
                 >
-                  Delete
+                  Deactivate
                 </button>
               </td>
             </tr>
