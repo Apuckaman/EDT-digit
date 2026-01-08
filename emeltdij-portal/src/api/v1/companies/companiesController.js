@@ -66,7 +66,8 @@ async function getCompanies(req, res) {
   const { page, limit, offset } = parsePagination(req.query);
 
   // status: active|inactive (soft delete miatt)
-  let status = null;
+  // Default: csak active (PO döntés: ne keverjük a soft-deleted rekordokat listában)
+  let status = true;
   if (req.query.status !== undefined) {
     const v = String(req.query.status);
     if (v === 'active') status = true;

@@ -28,6 +28,9 @@ curl -fsS -b cookies.txt -H "Content-Type: application/json" \
   http://localhost:3000/api/v1/companies
 
 curl -fsS -b cookies.txt "http://localhost:3000/api/v1/companies?page=1&limit=50"
+
+# Default: csak active companyk. Soft-deleted megjelenítés:
+curl -fsS -b cookies.txt "http://localhost:3000/api/v1/companies?page=1&limit=50&status=inactive"
 ```
 
 ### 3) Client létrehozás (companyId kötelező)

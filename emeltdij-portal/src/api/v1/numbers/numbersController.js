@@ -184,6 +184,14 @@ async function putNumber(req, res) {
     const existing = await PremiumNumber.findByPk(id);
     if (!existing) throw ApiError.notFound('Premium number not found', { id });
 
+    if (existing.status === 'archived') {
+      throw ApiError.conflict(
+        'NUMBER_ARCHIVED',
+        'Archived number cannot be modified',
+        { id }
+      );
+    }
+
     if (req.body.status !== undefined) {
       const toStatus = req.body.status;
       if (!isValidStatusTransition(existing.status, toStatus)) {
