@@ -335,6 +335,8 @@ async function runImport({ file, mode, user }) {
   await run.update({
     finishedAt: new Date(),
     summary,
+    // S6-06: detail nézetben első körben csak FAILED sorok
+    rows: rows.filter((r) => r.status === 'FAILED'),
   });
 
   return { importId, summary, rows };
