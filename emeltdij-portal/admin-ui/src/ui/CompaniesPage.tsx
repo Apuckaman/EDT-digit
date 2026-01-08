@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ApiError, apiFetch, apiPostJson } from '../api';
 
 type Company = {
@@ -90,7 +91,9 @@ export function CompaniesPage() {
           {data.map((c) => (
             <tr key={c.id}>
               <td>{c.id}</td>
-              <td>{c.name}</td>
+              <td>
+                <Link to={`/companies/${c.id}`}>{c.name}</Link>
+              </td>
               <td>{c.taxNumber}</td>
               <td>{c.type}</td>
               <td>{c.active ? 'active' : 'inactive'}</td>
@@ -106,6 +109,7 @@ export function CompaniesPage() {
                     });
                     await load();
                   }}
+                  disabled={!c.active}
                 >
                   Edit
                 </button>
@@ -115,6 +119,7 @@ export function CompaniesPage() {
                     await apiFetch(`/api/v1/companies/${c.id}`, { method: 'DELETE' });
                     await load();
                   }}
+                  disabled={!c.active}
                 >
                   Deactivate
                 </button>

@@ -3,8 +3,10 @@ import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { LoginPage } from './LoginPage';
 import { CompaniesPage } from './CompaniesPage';
+import { CompanyDetailPage } from './CompanyDetailPage';
 import { ImportRunsPage } from './ImportRunsPage';
 import { ImportRunDetailPage } from './ImportRunDetailPage';
+import { ImportPage } from './ImportPage';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -15,6 +17,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
         <strong>EDT digit – Admin</strong>
         <Link to="/companies">Companies</Link>
+        <Link to="/import">Import</Link>
         <Link to="/import-runs">Import runs</Link>
         <span style={{ flex: 1 }} />
         {user ? (
@@ -65,6 +68,22 @@ export function App() {
           element={
             <RequireAuth>
               <CompaniesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/companies/:id"
+          element={
+            <RequireAuth>
+              <CompanyDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/import"
+          element={
+            <RequireAuth>
+              <ImportPage />
             </RequireAuth>
           }
         />

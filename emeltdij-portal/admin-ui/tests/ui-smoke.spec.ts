@@ -8,5 +8,6 @@ test('login and load companies list', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Companies' })).toBeVisible();
   await expect(page.locator('table')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Import' })).toBeVisible();
 });
 
