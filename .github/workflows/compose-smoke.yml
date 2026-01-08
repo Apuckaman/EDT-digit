@@ -98,6 +98,12 @@ jobs:
           curl -fsS -b cookies.txt "http://localhost:3000/api/v1/clients?page=1&limit=5&companyId=${COMPANY_ID}" >/dev/null
           curl -fsS -b cookies.txt "http://localhost:3000/api/v1/numbers?page=1&limit=5&companyId=${COMPANY_ID}&status=active" >/dev/null
 
+          # read-heavy: search + overview
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/companies?page=1&limit=5&search=ci-${RUN_ID}" >/dev/null
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/clients?page=1&limit=5&search=ci%20client" >/dev/null
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/numbers?page=1&limit=5&search=06${RUN_ID}" >/dev/null
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/admin/companies/${COMPANY_ID}/overview" >/dev/null
+
           curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/numbers/${NUMBER_ID}" >/dev/null
           curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/clients/${CLIENT_ID}" >/dev/null
           curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/companies/${COMPANY_ID}" >/dev/null

@@ -1,6 +1,7 @@
 const express = require('express');
 
 const { authRouter } = require('./auth/authRoutes');
+const { adminRouter } = require('./admin/adminRoutes');
 const { companiesRouter } = require('./companies/companiesRoutes');
 const { clientsRouter } = require('./clients/clientsRoutes');
 const { numbersRouter } = require('./numbers/numbersRoutes');
@@ -11,6 +12,7 @@ const { ApiError } = require('../../errors/ApiError');
 const router = express.Router();
 
 router.use('/auth', authRouter);
+router.use('/admin', adminRouter);
 
 router.get('/status', (req, res) => {
   res.json({

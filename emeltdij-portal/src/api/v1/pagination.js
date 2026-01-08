@@ -22,7 +22,20 @@ function parsePagination(query) {
   return { page, limit, offset: (page - 1) * limit };
 }
 
+function buildListResponse(data, { page, limit, total }) {
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
 module.exports = {
   parsePagination,
+  buildListResponse,
 };
 

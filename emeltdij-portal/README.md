@@ -33,6 +33,30 @@ curl -fsS -b cookies.txt "http://localhost:3000/api/v1/companies?page=1&limit=50
 curl -fsS -b cookies.txt "http://localhost:3000/api/v1/companies?page=1&limit=50&status=inactive"
 ```
 
+## List response (Sprint 4)
+
+Minden listázó endpoint egységes struktúrát ad:
+
+```json
+{ "data": [], "meta": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 } }
+```
+
+## Search (Sprint 4)
+
+Részleges, case-insensitive keresés: `?search=`.
+
+- `GET /api/v1/companies?search=` (name, taxNumber)
+- `GET /api/v1/clients?search=` (name)
+- `GET /api/v1/numbers?search=` (number)
+
+## Admin overview endpoint (Sprint 4)
+
+UI-hoz “egy hívásos” aggregált read:
+
+```bash
+curl -fsS -b cookies.txt "http://localhost:3000/api/v1/admin/companies/1/overview"
+```
+
 ### 3) Client létrehozás (companyId kötelező)
 
 ```bash

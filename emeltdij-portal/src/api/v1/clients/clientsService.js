@@ -1,9 +1,16 @@
 const Client = require('../../../models/Client');
+const { Op, fn, col, where: sqlWhere } = require('sequelize');
 
-async function listClients({ companyId, offset, limit, status } = {}) {
+async function listClients({ companyId, offset, limit, status, search } = {}) {
   const where = {};
   if (companyId) where.companyId = companyId;
   if (status !== undefined && status !== null) where.active = status;
+
+  if (search) {
+    const q = String(search).toLowerCase();
+    const like = `%${q}%`;
+    where[Op.or] = [sqlWhere(fn('LOWER', col('name')), { [Op.like]: like })];
+  }
 
   return Client.findAndCountAll({
     where,
@@ -13,21 +20,21 @@ async function listClients({ companyId, offset, limit, status } = {}) {
   });
 }
 
-async function createClient(data) {
-  return Client.create(data);
+async function createClient(data, user) {
+  return Client.create(data, { user });
 }
 
-async function updateClient(id, data) {
+async function updateClient(id, data, user) {
   const client = await Client.findByPk(id);
   if (!client) return null;
-  await client.update(data);
+  await client.update(data, { user });
   return client;
 }
 
-async function softDeleteClient(id) {
+async function softDeleteClient(id, user) {
   const client = await Client.findByPk(id);
   if (!client) return null;
-  await client.update({ active: false });
+  await client.update({ active: false }, { user });
   return client;
 }
 

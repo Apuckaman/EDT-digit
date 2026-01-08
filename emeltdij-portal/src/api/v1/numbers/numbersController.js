@@ -3,7 +3,7 @@ const Company = require('../../../models/Company');
 const Client = require('../../../models/Client');
 const PremiumNumber = require('../../../models/PremiumNumber');
 const { listNumbers, createNumber, updateNumber } = require('./numbersService');
-const { parsePagination } = require('../pagination');
+const { parsePagination, buildListResponse } = require('../pagination');
 
 const ALLOWED_STATUSES = new Set(['active', 'suspended', 'archived']);
 
@@ -74,6 +74,10 @@ async function getNumbers(req, res) {
   const companyId = parseOptionalInt(req.query.companyId);
   const clientId = parseOptionalInt(req.query.clientId);
   const status = req.query.status !== undefined ? String(req.query.status) : null;
+  const search =
+    typeof req.query.search === 'string' && req.query.search.trim() !== ''
+      ? req.query.search.trim()
+      : null;
 
   if (Number.isNaN(companyId)) {
     throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid companyId', {
@@ -98,14 +102,10 @@ async function getNumbers(req, res) {
     status,
     offset,
     limit,
+    search,
   });
 
-  res.json({
-    items: result.rows,
-    page,
-    limit,
-    total: result.count,
-  });
+  res.json(buildListResponse(result.rows, { page, limit, total: result.count }));
 }
 
 async function postNumber(req, res) {
@@ -120,12 +120,26 @@ async function postNumber(req, res) {
       companyId: 'Company does not exist',
     });
   }
+  if (!company.active) {
+    throw ApiError.conflict(
+      'BUSINESS_RULE_VIOLATION',
+      'Cannot create number for inactive company',
+      { companyId }
+    );
+  }
 
   const client = await Client.findByPk(clientId);
   if (!client) {
     throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid clientId', {
       clientId: 'Client does not exist',
     });
+  }
+  if (!client.active) {
+    throw ApiError.conflict(
+      'BUSINESS_RULE_VIOLATION',
+      'Cannot create number for inactive client',
+      { clientId }
+    );
   }
 
   try {
@@ -136,7 +150,7 @@ async function postNumber(req, res) {
       provider: req.body.provider ?? null,
       pricingPlan: req.body.pricingPlan ?? null,
       status: req.body.status ?? 'active',
-    });
+    }, req.user);
     res.status(201).json(number);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
@@ -168,6 +182,13 @@ async function putNumber(req, res) {
         companyId: 'Company does not exist',
       });
     }
+    if (!company.active) {
+      throw ApiError.conflict(
+        'BUSINESS_RULE_VIOLATION',
+        'Cannot assign number to inactive company',
+        { companyId }
+      );
+    }
   }
 
   if (req.body.clientId !== undefined) {
@@ -177,6 +198,13 @@ async function putNumber(req, res) {
       throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid clientId', {
         clientId: 'Client does not exist',
       });
+    }
+    if (!client.active) {
+      throw ApiError.conflict(
+        'BUSINESS_RULE_VIOLATION',
+        'Cannot assign number to inactive client',
+        { clientId }
+      );
     }
   }
 
@@ -192,6 +220,23 @@ async function putNumber(req, res) {
       );
     }
 
+    const existingCompany = await Company.findByPk(existing.companyId);
+    if (existingCompany && !existingCompany.active) {
+      throw ApiError.conflict(
+        'BUSINESS_RULE_VIOLATION',
+        'Number cannot be modified because company is inactive',
+        { companyId: existing.companyId }
+      );
+    }
+    const existingClient = await Client.findByPk(existing.clientId);
+    if (existingClient && !existingClient.active) {
+      throw ApiError.conflict(
+        'BUSINESS_RULE_VIOLATION',
+        'Number cannot be modified because client is inactive',
+        { clientId: existing.clientId }
+      );
+    }
+
     if (req.body.status !== undefined) {
       const toStatus = req.body.status;
       if (!isValidStatusTransition(existing.status, toStatus)) {
@@ -203,7 +248,7 @@ async function putNumber(req, res) {
       }
     }
 
-    const updated = await updateNumber(id, req.body);
+    const updated = await updateNumber(id, req.body, req.user);
     res.json(updated);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
@@ -236,7 +281,7 @@ async function deleteNumber(req, res) {
     );
   }
 
-  const updated = await updateNumber(id, { status: 'archived' });
+  const updated = await updateNumber(id, { status: 'archived' }, req.user);
   res.json(updated);
 }
 

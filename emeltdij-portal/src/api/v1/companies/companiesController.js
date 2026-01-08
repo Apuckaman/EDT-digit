@@ -1,5 +1,5 @@
 const { ApiError } = require('../../../errors/ApiError');
-const { parsePagination } = require('../pagination');
+const { parsePagination, buildListResponse } = require('../pagination');
 const {
   listCompanies,
   getCompanyById,
@@ -79,13 +79,13 @@ async function getCompanies(req, res) {
     }
   }
 
-  const result = await listCompanies({ offset, limit, status });
-  res.json({
-    items: result.rows,
-    page,
-    limit,
-    total: result.count,
-  });
+  const search =
+    typeof req.query.search === 'string' && req.query.search.trim() !== ''
+      ? req.query.search.trim()
+      : null;
+
+  const result = await listCompanies({ offset, limit, status, search });
+  res.json(buildListResponse(result.rows, { page, limit, total: result.count }));
 }
 
 async function getCompany(req, res) {
@@ -115,7 +115,7 @@ async function postCompany(req, res) {
       bankAccount: req.body.bankAccount ?? null,
       szamlazzApiKey: req.body.szamlazzApiKey ?? null,
       active: req.body.active ?? true,
-    });
+    }, req.user);
     res.status(201).json(company);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
@@ -155,7 +155,19 @@ async function putCompany(req, res) {
   validateCompanyPayload(req.body, { partial: true });
 
   try {
-    const updated = await updateCompany(id, req.body);
+    const existing = await getCompanyById(id);
+    if (!existing) {
+      throw ApiError.notFound('Company not found', { id });
+    }
+    if (!existing.active) {
+      throw ApiError.conflict(
+        'BUSINESS_RULE_VIOLATION',
+        'Inactive company cannot be modified',
+        { id }
+      );
+    }
+
+    const updated = await updateCompany(id, req.body, req.user);
     if (!updated) {
       throw ApiError.notFound('Company not found', { id });
     }
@@ -195,7 +207,7 @@ async function deleteCompany(req, res) {
     });
   }
 
-  const company = await softDeleteCompany(id);
+  const company = await softDeleteCompany(id, req.user);
   if (!company) {
     throw ApiError.notFound('Company not found', { id });
   }

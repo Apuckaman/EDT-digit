@@ -42,6 +42,18 @@ const PremiumNumber = sequelize.define(
       defaultValue: 'active',
       field: 'status',
     },
+    createdBy: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'system',
+      field: 'created_by',
+    },
+    updatedBy: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'system',
+      field: 'updated_by',
+    },
   },
   {
     tableName: 'premium_numbers',
@@ -51,6 +63,29 @@ const PremiumNumber = sequelize.define(
       { fields: ['company_id'] },
       { fields: ['status'] },
     ],
+    hooks: {
+      beforeCreate(instance, options) {
+        const actor =
+          (options && options.user && options.user.username) ||
+          (options && options.user && options.user.id) ||
+          (options && options.user) ||
+          null;
+        if (actor) {
+          if (!instance.createdBy) instance.createdBy = String(actor);
+          instance.updatedBy = String(actor);
+        }
+      },
+      beforeUpdate(instance, options) {
+        const actor =
+          (options && options.user && options.user.username) ||
+          (options && options.user && options.user.id) ||
+          (options && options.user) ||
+          null;
+        if (actor) {
+          instance.updatedBy = String(actor);
+        }
+      },
+    },
   }
 );
 

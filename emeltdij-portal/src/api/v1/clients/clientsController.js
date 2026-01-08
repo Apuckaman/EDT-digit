@@ -1,6 +1,7 @@
 const { ApiError } = require('../../../errors/ApiError');
 const Company = require('../../../models/Company');
-const { parsePagination } = require('../pagination');
+const Client = require('../../../models/Client');
+const { parsePagination, buildListResponse } = require('../pagination');
 const {
   listClients,
   createClient,
@@ -79,19 +80,20 @@ async function getClients(req, res) {
     }
   }
 
+  const search =
+    typeof req.query.search === 'string' && req.query.search.trim() !== ''
+      ? req.query.search.trim()
+      : null;
+
   const result = await listClients({
     companyId: companyId || null,
     status,
     offset,
     limit,
+    search,
   });
 
-  res.json({
-    items: result.rows,
-    page,
-    limit,
-    total: result.count,
-  });
+  res.json(buildListResponse(result.rows, { page, limit, total: result.count }));
 }
 
 async function postClient(req, res) {
@@ -104,6 +106,13 @@ async function postClient(req, res) {
       companyId: 'Company does not exist',
     });
   }
+  if (!company.active) {
+    throw ApiError.conflict(
+      'BUSINESS_RULE_VIOLATION',
+      'Cannot create client for inactive company',
+      { companyId }
+    );
+  }
 
   try {
     const client = await createClient({
@@ -114,7 +123,7 @@ async function postClient(req, res) {
       phone: req.body.phone ?? null,
       companyId,
       active: req.body.active ?? true,
-    });
+    }, req.user);
     res.status(201).json(client);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
@@ -138,19 +147,30 @@ async function putClient(req, res) {
 
   validateClientPayload(req.body, { partial: true });
 
-  if (req.body.companyId !== undefined) {
-    const companyId = parseOptionalInt(req.body.companyId);
-    const company = await Company.findByPk(companyId);
-    if (!company) {
-      throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid companyId', {
-        companyId: 'Company does not exist',
-      });
-    }
+  const existing = await Client.findByPk(id);
+  if (!existing) throw ApiError.notFound('Client not found', { id });
+
+  const targetCompanyId =
+    req.body.companyId !== undefined
+      ? parseOptionalInt(req.body.companyId)
+      : existing.companyId;
+
+  const company = await Company.findByPk(targetCompanyId);
+  if (!company) {
+    throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid companyId', {
+      companyId: 'Company does not exist',
+    });
+  }
+  if (!company.active) {
+    throw ApiError.conflict(
+      'BUSINESS_RULE_VIOLATION',
+      'Client cannot be modified because company is inactive',
+      { companyId: targetCompanyId }
+    );
   }
 
   try {
-    const updated = await updateClient(id, req.body);
-    if (!updated) throw ApiError.notFound('Client not found', { id });
+    const updated = await updateClient(id, req.body, req.user);
     res.json(updated);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
@@ -176,7 +196,7 @@ module.exports = {
       });
     }
 
-    const client = await softDeleteClient(id);
+    const client = await softDeleteClient(id, req.user);
     if (!client) throw ApiError.notFound('Client not found', { id });
     res.json(client);
   },
