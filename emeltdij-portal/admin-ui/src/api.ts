@@ -38,6 +38,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
     const body = (await parseJsonSafe(res)) as ApiErrorPayload | null;
     if (body?.error?.code) {
       throw new ApiError(res.status, body.error.code, body.error.message, body.error.details);

@@ -33,8 +33,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function login(usernameOrEmail: string, password: string) {
-    const resp = await apiPostJson<{ user: User }>('/api/v1/auth/login', { usernameOrEmail, password });
-    setUser(resp.user);
+    await apiPostJson('/api/v1/auth/login', { usernameOrEmail, password });
+    // Ticket S6-01: login után kötelező /auth/me (session validálás)
+    await refresh();
   }
 
   async function logout() {

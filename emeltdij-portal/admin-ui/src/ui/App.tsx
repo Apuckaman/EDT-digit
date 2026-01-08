@@ -41,6 +41,18 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export function App() {
+  const { refresh } = useAuth();
+  const nav = useNavigate();
+
+  React.useEffect(() => {
+    const handler = async () => {
+      await refresh();
+      nav('/login');
+    };
+    window.addEventListener('auth:unauthorized', handler as EventListener);
+    return () => window.removeEventListener('auth:unauthorized', handler as EventListener);
+  }, [nav, refresh]);
+
   return (
     <Layout>
       <Routes>
