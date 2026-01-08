@@ -1,0 +1,4 @@
+company_taxNumber,company_name,client_name,number,number_status
+25145940-1-02,Ween Bt.,Teszt Ügyfél 1,0690-111-1111,active
+25742561-2-42,SwiftGate Bt.,Teszt Ügyfél 2,0690-222-2222,suspended
+25742561-2-42,SwiftGate Bt.,Teszt Ügyfél 2,0690-333-3333,archived

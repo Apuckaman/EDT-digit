@@ -3,6 +3,7 @@ const Company = require('./Company');
 const Client = require('./Client');
 const PremiumNumber = require('./PremiumNumber');
 const User = require('./User');
+const ImportRun = require('./ImportRun');
 
 // Company – Client
 Company.hasMany(Client, { foreignKey: 'companyId' });
@@ -25,4 +26,5 @@ module.exports = {
   Client,
   PremiumNumber,
   User,
+  ImportRun,
 };

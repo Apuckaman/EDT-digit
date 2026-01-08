@@ -57,6 +57,26 @@ UI-hoz “egy hívásos” aggregált read:
 curl -fsS -b cookies.txt "http://localhost:3000/api/v1/admin/companies/1/overview"
 ```
 
+## CSV import (Sprint 5)
+
+Spec és minta:
+- `import-templates/import-spec.md`
+- `import-templates/premium-import-template.csv`
+
+### Dry-run (validáció, DB write nélkül)
+
+```bash
+curl -fsS -b cookies.txt -F "file=@import-templates/premium-import-template.csv;type=text/csv" \
+  "http://localhost:3000/api/v1/admin/import/premium-numbers?mode=dry-run"
+```
+
+### Apply (éles import, idempotens)
+
+```bash
+curl -fsS -b cookies.txt -F "file=@import-templates/premium-import-template.csv;type=text/csv" \
+  "http://localhost:3000/api/v1/admin/import/premium-numbers?mode=apply"
+```
+
 ### 3) Client létrehozás (companyId kötelező)
 
 ```bash

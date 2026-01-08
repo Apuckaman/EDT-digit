@@ -108,6 +108,61 @@ jobs:
           curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/clients/${CLIENT_ID}" >/dev/null
           curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/companies/${COMPANY_ID}" >/dev/null
 
+      - name: Import smoke (dry-run -> apply -> list -> apply again)
+        working-directory: emeltdij-portal
+        run: |
+          set -euo pipefail
+          rm -f cookies.txt import.csv
+
+          curl -fsS -c cookies.txt -H "Content-Type: application/json" \
+            -d '{"usernameOrEmail":"admin","password":"admin123"}' \
+            "http://localhost:3000/api/v1/auth/login" >/dev/null
+
+          RUN_ID="${GITHUB_RUN_ID:-ci}"
+          cat > import.csv <<EOF
+company_taxNumber,company_name,client_name,number,number_status
+IMPCO-${RUN_ID},Import Co ${RUN_ID},Import Client ${RUN_ID},06${RUN_ID}01,active
+IMPCO-${RUN_ID},Import Co ${RUN_ID},Import Client ${RUN_ID},06${RUN_ID}02,suspended
+IMPCO-${RUN_ID},Import Co ${RUN_ID},Import Client ${RUN_ID},06${RUN_ID}03,active
+EOF
+
+          DRY="$(curl -fsS -b cookies.txt -F "file=@import.csv;type=text/csv" \
+            "http://localhost:3000/api/v1/admin/import/premium-numbers?mode=dry-run")"
+          echo "$DRY" | python3 - <<'PY'
+import json,sys
+data=json.load(sys.stdin)
+assert "importId" in data
+s=data["summary"]
+assert s["total"]==3
+assert s["failed"]==0
+PY
+
+          APPLY1="$(curl -fsS -b cookies.txt -F "file=@import.csv;type=text/csv" \
+            "http://localhost:3000/api/v1/admin/import/premium-numbers?mode=apply")"
+          echo "$APPLY1" | python3 - <<'PY'
+import json,sys
+data=json.load(sys.stdin)
+s=data["summary"]
+assert s["total"]==3
+assert s["failed"]==0
+PY
+
+          # verify records exist (search by prefix)
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/companies?page=1&limit=10&search=impco" >/dev/null
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/clients?page=1&limit=10&search=import%20client" >/dev/null
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/numbers?page=1&limit=10&search=06${RUN_ID}" >/dev/null
+
+          APPLY2="$(curl -fsS -b cookies.txt -F "file=@import.csv;type=text/csv" \
+            "http://localhost:3000/api/v1/admin/import/premium-numbers?mode=apply")"
+          echo "$APPLY2" | python3 - <<'PY'
+import json,sys
+data=json.load(sys.stdin)
+s=data["summary"]
+assert s["total"]==3
+assert s["failed"]==0
+assert s["created"]==0
+PY
+
       - name: Logs on failure
         if: failure()
         working-directory: emeltdij-portal
