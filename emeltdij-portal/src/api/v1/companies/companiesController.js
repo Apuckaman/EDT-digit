@@ -1,8 +1,11 @@
 const { ApiError } = require('../../../errors/ApiError');
+const { parsePagination } = require('../pagination');
 const {
   listCompanies,
+  getCompanyById,
   createCompany,
   updateCompany,
+  softDeleteCompany,
 } = require('./companiesService');
 
 const ALLOWED_TYPES = new Set(['AFAS', 'AFAMENTES']);
@@ -60,8 +63,44 @@ function validateCompanyPayload(body, { partial = false } = {}) {
 }
 
 async function getCompanies(req, res) {
-  const companies = await listCompanies();
-  res.json(companies);
+  const { page, limit, offset } = parsePagination(req.query);
+
+  // status: active|inactive (soft delete miatt)
+  let status = null;
+  if (req.query.status !== undefined) {
+    const v = String(req.query.status);
+    if (v === 'active') status = true;
+    else if (v === 'inactive') status = false;
+    else {
+      throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid status', {
+        status: 'Must be one of: active, inactive',
+      });
+    }
+  }
+
+  const result = await listCompanies({ offset, limit, status });
+  res.json({
+    items: result.rows,
+    page,
+    limit,
+    total: result.count,
+  });
+}
+
+async function getCompany(req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) {
+    throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid company id', {
+      id: 'Must be an integer',
+    });
+  }
+
+  const company = await getCompanyById(id);
+  if (!company) {
+    throw ApiError.notFound('Company not found', { id });
+  }
+
+  res.json(company);
 }
 
 async function postCompany(req, res) {
@@ -79,10 +118,25 @@ async function postCompany(req, res) {
     res.status(201).json(company);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
+      const fields = Array.isArray(err.fields) ? err.fields : [];
+      if (fields.includes('tax_number')) {
+        throw ApiError.conflict(
+          'COMPANY_TAX_NUMBER_EXISTS',
+          'Company taxNumber must be unique',
+          { field: 'taxNumber' }
+        );
+      }
+      if (fields.includes('name')) {
+        throw ApiError.conflict(
+          'COMPANY_NAME_EXISTS',
+          'Company name must be unique',
+          { field: 'name' }
+        );
+      }
       throw ApiError.conflict(
-        'COMPANY_TAX_NUMBER_EXISTS',
-        'Company taxNumber must be unique',
-        { field: 'taxNumber' }
+        'COMPANY_CONFLICT',
+        'Company conflicts with an existing record',
+        { fields }
       );
     }
     throw err;
@@ -107,18 +161,51 @@ async function putCompany(req, res) {
     res.json(updated);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
+      const fields = Array.isArray(err.fields) ? err.fields : [];
+      if (fields.includes('tax_number')) {
+        throw ApiError.conflict(
+          'COMPANY_TAX_NUMBER_EXISTS',
+          'Company taxNumber must be unique',
+          { field: 'taxNumber' }
+        );
+      }
+      if (fields.includes('name')) {
+        throw ApiError.conflict(
+          'COMPANY_NAME_EXISTS',
+          'Company name must be unique',
+          { field: 'name' }
+        );
+      }
       throw ApiError.conflict(
-        'COMPANY_TAX_NUMBER_EXISTS',
-        'Company taxNumber must be unique',
-        { field: 'taxNumber' }
+        'COMPANY_CONFLICT',
+        'Company conflicts with an existing record',
+        { fields }
       );
     }
     throw err;
   }
 }
 
+async function deleteCompany(req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) {
+    throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid company id', {
+      id: 'Must be an integer',
+    });
+  }
+
+  const company = await softDeleteCompany(id);
+  if (!company) {
+    throw ApiError.notFound('Company not found', { id });
+  }
+
+  res.json(company);
+}
+
 module.exports = {
   getCompanies,
+  getCompany,
   postCompany,
   putCompany,
+  deleteCompany,
 };

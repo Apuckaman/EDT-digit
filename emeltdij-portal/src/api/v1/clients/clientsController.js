@@ -1,9 +1,11 @@
 const { ApiError } = require('../../../errors/ApiError');
 const Company = require('../../../models/Company');
+const { parsePagination } = require('../pagination');
 const {
   listClients,
   createClient,
   updateClient,
+  softDeleteClient,
 } = require('./clientsService');
 
 function parseOptionalInt(value) {
@@ -56,14 +58,40 @@ function validateClientPayload(body, { partial = false } = {}) {
 }
 
 async function getClients(req, res) {
+  const { page, limit, offset } = parsePagination(req.query);
+
   const companyId = parseOptionalInt(req.query.companyId);
   if (Number.isNaN(companyId)) {
     throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid companyId', {
       companyId: 'Must be an integer',
     });
   }
-  const clients = await listClients({ companyId: companyId || null });
-  res.json(clients);
+
+  let status = null;
+  if (req.query.status !== undefined) {
+    const v = String(req.query.status);
+    if (v === 'active') status = true;
+    else if (v === 'inactive') status = false;
+    else {
+      throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid status', {
+        status: 'Must be one of: active, inactive',
+      });
+    }
+  }
+
+  const result = await listClients({
+    companyId: companyId || null,
+    status,
+    offset,
+    limit,
+  });
+
+  res.json({
+    items: result.rows,
+    page,
+    limit,
+    total: result.count,
+  });
 }
 
 async function postClient(req, res) {
@@ -140,5 +168,17 @@ module.exports = {
   getClients,
   postClient,
   putClient,
+  deleteClient: async function deleteClient(req, res) {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) {
+      throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid client id', {
+        id: 'Must be an integer',
+      });
+    }
+
+    const client = await softDeleteClient(id);
+    if (!client) throw ApiError.notFound('Client not found', { id });
+    res.json(client);
+  },
 };
 

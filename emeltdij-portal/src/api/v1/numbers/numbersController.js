@@ -1,12 +1,24 @@
 const { ApiError } = require('../../../errors/ApiError');
 const Company = require('../../../models/Company');
 const Client = require('../../../models/Client');
+const PremiumNumber = require('../../../models/PremiumNumber');
 const { listNumbers, createNumber, updateNumber } = require('./numbersService');
+const { parsePagination } = require('../pagination');
+
+const ALLOWED_STATUSES = new Set(['active', 'suspended', 'archived']);
 
 function parseOptionalInt(value) {
   if (value === undefined || value === null || value === '') return null;
   const n = parseInt(String(value), 10);
   return Number.isFinite(n) ? n : NaN;
+}
+
+function isValidStatusTransition(fromStatus, toStatus) {
+  if (fromStatus === toStatus) return true;
+  if (fromStatus === 'active') return toStatus === 'suspended' || toStatus === 'archived';
+  if (fromStatus === 'suspended') return toStatus === 'active' || toStatus === 'archived';
+  if (fromStatus === 'archived') return false;
+  return false;
 }
 
 function validateNumberPayload(body, { partial = false } = {}) {
@@ -41,8 +53,10 @@ function validateNumberPayload(body, { partial = false } = {}) {
     if (typeof body.pricingPlan !== 'string') details.pricingPlan = 'Must be a string or null';
   }
 
-  if (body.active !== undefined) {
-    if (typeof body.active !== 'boolean') details.active = 'Must be a boolean';
+  if (body.status !== undefined) {
+    if (typeof body.status !== 'string' || !ALLOWED_STATUSES.has(body.status)) {
+      details.status = 'Must be one of: active, suspended, archived';
+    }
   }
 
   if (Object.keys(details).length) {
@@ -55,8 +69,11 @@ function validateNumberPayload(body, { partial = false } = {}) {
 }
 
 async function getNumbers(req, res) {
+  const { page, limit, offset } = parsePagination(req.query);
+
   const companyId = parseOptionalInt(req.query.companyId);
   const clientId = parseOptionalInt(req.query.clientId);
+  const status = req.query.status !== undefined ? String(req.query.status) : null;
 
   if (Number.isNaN(companyId)) {
     throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid companyId', {
@@ -69,12 +86,26 @@ async function getNumbers(req, res) {
     });
   }
 
-  const items = await listNumbers({
+  if (status !== null && !ALLOWED_STATUSES.has(status)) {
+    throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid status', {
+      status: 'Must be one of: active, suspended, archived',
+    });
+  }
+
+  const result = await listNumbers({
     companyId: companyId || null,
     clientId: clientId || null,
+    status,
+    offset,
+    limit,
   });
 
-  res.json(items);
+  res.json({
+    items: result.rows,
+    page,
+    limit,
+    total: result.count,
+  });
 }
 
 async function postNumber(req, res) {
@@ -104,15 +135,15 @@ async function postNumber(req, res) {
       companyId,
       provider: req.body.provider ?? null,
       pricingPlan: req.body.pricingPlan ?? null,
-      active: req.body.active ?? true,
+      status: req.body.status ?? 'active',
     });
     res.status(201).json(number);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
       throw ApiError.conflict(
         'PREMIUM_NUMBER_EXISTS',
-        'Number must be unique per company',
-        { fields: ['companyId', 'number'] }
+        'phone_number must be unique',
+        { field: 'number' }
       );
     }
     throw err;
@@ -150,24 +181,61 @@ async function putNumber(req, res) {
   }
 
   try {
+    const existing = await PremiumNumber.findByPk(id);
+    if (!existing) throw ApiError.notFound('Premium number not found', { id });
+
+    if (req.body.status !== undefined) {
+      const toStatus = req.body.status;
+      if (!isValidStatusTransition(existing.status, toStatus)) {
+        throw ApiError.conflict(
+          'INVALID_STATUS_TRANSITION',
+          'Invalid status transition',
+          { from: existing.status, to: toStatus }
+        );
+      }
+    }
+
     const updated = await updateNumber(id, req.body);
-    if (!updated) throw ApiError.notFound('Premium number not found', { id });
     res.json(updated);
   } catch (err) {
     if (err && err.name === 'SequelizeUniqueConstraintError') {
       throw ApiError.conflict(
         'PREMIUM_NUMBER_EXISTS',
-        'Number must be unique per company',
-        { fields: ['companyId', 'number'] }
+        'phone_number must be unique',
+        { field: 'number' }
       );
     }
     throw err;
   }
 }
 
+async function deleteNumber(req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) {
+    throw ApiError.badRequest('VALIDATION_ERROR', 'Invalid number id', {
+      id: 'Must be an integer',
+    });
+  }
+
+  const existing = await PremiumNumber.findByPk(id);
+  if (!existing) throw ApiError.notFound('Premium number not found', { id });
+
+  if (!isValidStatusTransition(existing.status, 'archived')) {
+    throw ApiError.conflict(
+      'INVALID_STATUS_TRANSITION',
+      'Invalid status transition',
+      { from: existing.status, to: 'archived' }
+    );
+  }
+
+  const updated = await updateNumber(id, { status: 'archived' });
+  res.json(updated);
+}
+
 module.exports = {
   getNumbers,
   postNumber,
   putNumber,
+  deleteNumber,
 };
 

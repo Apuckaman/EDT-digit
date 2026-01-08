@@ -1,10 +1,17 @@
 const PremiumNumber = require('../../../models/PremiumNumber');
 
-async function listNumbers({ companyId, clientId } = {}) {
+async function listNumbers({ companyId, clientId, status, offset, limit } = {}) {
   const where = {};
   if (companyId) where.companyId = companyId;
   if (clientId) where.clientId = clientId;
-  return PremiumNumber.findAll({ where, order: [['id', 'ASC']] });
+  if (status) where.status = status;
+
+  return PremiumNumber.findAndCountAll({
+    where,
+    order: [['createdAt', 'DESC']],
+    offset,
+    limit,
+  });
 }
 
 async function createNumber(data) {

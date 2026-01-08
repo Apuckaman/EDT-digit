@@ -17,3 +17,4 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    command: sh -c "npm run seed && npm start"

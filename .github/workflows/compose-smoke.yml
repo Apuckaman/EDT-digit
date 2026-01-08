@@ -67,6 +67,41 @@ jobs:
       - name: Smoke check /api/v1/status
         run: curl -fsS "http://localhost:3000/api/v1/status"
 
+      - name: Admin flow smoke (login -> create -> list -> cleanup)
+        run: |
+          set -euo pipefail
+          rm -f cookies.txt
+
+          curl -fsS -c cookies.txt -H "Content-Type: application/json" \
+            -d '{"usernameOrEmail":"admin","password":"admin123"}' \
+            "http://localhost:3000/api/v1/auth/login" >/dev/null
+
+          RUN_ID="${GITHUB_RUN_ID:-ci}"
+          COMPANY_NAME="CI Company ${RUN_ID}"
+          TAX_NUMBER="CI-${RUN_ID}"
+          CLIENT_CODE="CI${RUN_ID}"
+          PREMIUM_NUMBER="06${RUN_ID}"
+
+          COMPANY_ID="$(curl -fsS -b cookies.txt -H "Content-Type: application/json" \
+            -d "{\"name\":\"${COMPANY_NAME}\",\"taxNumber\":\"${TAX_NUMBER}\",\"type\":\"AFAS\",\"bankAccount\":\"\",\"active\":true}" \
+            "http://localhost:3000/api/v1/companies" | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')"
+
+          CLIENT_ID="$(curl -fsS -b cookies.txt -H "Content-Type: application/json" \
+            -d "{\"code\":\"${CLIENT_CODE}\",\"name\":\"CI Client ${RUN_ID}\",\"billingAddress\":\"CI address\",\"email\":null,\"phone\":null,\"companyId\":${COMPANY_ID},\"active\":true}" \
+            "http://localhost:3000/api/v1/clients" | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')"
+
+          NUMBER_ID="$(curl -fsS -b cookies.txt -H "Content-Type: application/json" \
+            -d "{\"number\":\"${PREMIUM_NUMBER}\",\"clientId\":${CLIENT_ID},\"companyId\":${COMPANY_ID},\"provider\":\"CI\",\"pricingPlan\":\"CI\",\"status\":\"active\"}" \
+            "http://localhost:3000/api/v1/numbers" | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')"
+
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/companies?page=1&limit=5" >/dev/null
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/clients?page=1&limit=5&companyId=${COMPANY_ID}" >/dev/null
+          curl -fsS -b cookies.txt "http://localhost:3000/api/v1/numbers?page=1&limit=5&companyId=${COMPANY_ID}&status=active" >/dev/null
+
+          curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/numbers/${NUMBER_ID}" >/dev/null
+          curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/clients/${CLIENT_ID}" >/dev/null
+          curl -fsS -b cookies.txt -X DELETE "http://localhost:3000/api/v1/companies/${COMPANY_ID}" >/dev/null
+
       - name: Logs on failure
         if: failure()
         working-directory: emeltdij-portal

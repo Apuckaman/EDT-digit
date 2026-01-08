@@ -14,6 +14,7 @@ const PremiumNumber = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       field: 'number',
+      unique: true,
     },
     clientId: {
       type: DataTypes.INTEGER,
@@ -35,24 +36,20 @@ const PremiumNumber = sequelize.define(
       allowNull: true,
       field: 'pricing_plan',
     },
-    active: {
-      type: DataTypes.BOOLEAN,
+    status: {
+      type: DataTypes.ENUM('active', 'suspended', 'archived'),
       allowNull: false,
-      defaultValue: true,
-      field: 'active',
+      defaultValue: 'active',
+      field: 'status',
     },
   },
   {
     tableName: 'premium_numbers',
     timestamps: true,
     indexes: [
-      {
-        unique: true,
-        fields: ['company_id', 'number'],
-      },
       { fields: ['client_id'] },
       { fields: ['company_id'] },
-      { fields: ['active'] },
+      { fields: ['status'] },
     ],
   }
 );

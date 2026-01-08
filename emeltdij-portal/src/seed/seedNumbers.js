@@ -38,7 +38,7 @@ async function seedNumbers() {
 
     for (const data of numbersData) {
       const [number, created] = await PremiumNumber.findOrCreate({
-        where: { companyId: data.companyId, number: data.number },
+        where: { number: data.number },
         defaults: data,
       });
 
