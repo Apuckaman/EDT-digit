@@ -44,6 +44,11 @@ const ImportRun = sequelize.define(
       allowNull: true,
       field: 'summary',
     },
+    rows: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'rows',
+    },
   },
   {
     tableName: 'import_runs',
